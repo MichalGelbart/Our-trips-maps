@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Family Ireland Adventures 🍀</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #2d6a4f;
+    --green-light: #52b788;
+    --cream: #f8f4ef;
+    --dark: #1a1a2e;
+    --gold: #e9c46a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Lato', sans-serif;
+    background: var(--dark);
+    color: var(--cream);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    background: linear-gradient(135deg, var(--green) 0%, #1a3a2a 100%);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--gold);
+    flex-shrink: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    color: var(--cream);
+    letter-spacing: 0.02em;
+  }
+
+  header h1 span { color: var(--gold); }
+
+  .stats {
+    font-size: 0.78rem;
+    color: var(--green-light);
+    font-weight: 300;
+    letter-spacing: 0.05em;
+  }
+
+  .filter-bar {
+    background: #111827;
+    padding: 10px 20px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid #2a2a3a;
+    flex-shrink: 0;
+    z-index: 999;
+  }
+
+  .filter-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #9ca3af;
+    margin-right: 4px;
+  }
+
+  .filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 100px;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    font-family: 'Lato', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    transition: all 0.2s ease;
+    background: #1f2937;
+    color: #d1d5db;
+  }
+
+  .filter-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .filter-btn.active { color: #fff; }
+  .filter-btn .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  .count-badge {
+    background: rgba(255,255,255,0.12);
+    border-radius: 100px;
+    padding: 1px 7px;
+    font-size: 0.68rem;
+    font-weight: 400;
+  }
+
+  #map { flex: 1; }
+
+  /* Leaflet popup overrides */
+  .leaflet-popup-content-wrapper {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    padding: 0;
+    overflow: hidden;
+    min-width: 260px;
+    max-width: 320px;
+  }
+  .leaflet-popup-tip { background: #0f172a; }
+  .leaflet-popup-content { margin: 0; width: 100% !important; }
+  .leaflet-popup-close-button { color: #9ca3af !important; font-size: 1.1rem !important; top: 10px !important; right: 12px !important; }
+  .leaflet-popup-close-button:hover { color: #fff !important; }
+
+  .popup-header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid #1e293b;
+  }
+
+  .popup-cat {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    padding: 3px 9px;
+    border-radius: 100px;
+  }
+
+  .popup-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    color: #f1f5f9;
+    line-height: 1.3;
+    margin-bottom: 4px;
+  }
+
+  .popup-county {
+    font-size: 0.72rem;
+    color: #64748b;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .popup-body { padding: 12px 16px; }
+
+  .popup-grade {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .popup-grade-label { font-size: 0.72rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  .stars { color: var(--gold); letter-spacing: 1px; font-size: 0.9rem; }
+  .stars-empty { color: #374151; }
+
+  .popup-comment {
+    font-size: 0.82rem;
+    color: #cbd5e1;
+    line-height: 1.5;
+    font-style: italic;
+    border-left: 2px solid #334155;
+    padding-left: 10px;
+    margin-top: 6px;
+    margin-bottom: 12px;
+  }
+
+  .popup-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .popup-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: 1;
+    justify-content: center;
+    padding: 7px 10px;
+    border-radius: 8px;
+    font-family: 'Lato', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-decoration: none;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    border: 1.5px solid;
+  }
+
+  .popup-action-btn.google {
+    background: rgba(66,133,244,0.12);
+    border-color: rgba(66,133,244,0.4);
+    color: #74a8ff;
+  }
+  .popup-action-btn.google:hover {
+    background: rgba(66,133,244,0.25);
+    border-color: #4285f4;
+    color: #fff;
+    transform: translateY(-1px);
+  }
+
+  .popup-action-btn.maps {
+    background: rgba(52,168,83,0.12);
+    border-color: rgba(52,168,83,0.4);
+    color: #6dd98c;
+  }
+  .popup-action-btn.maps:hover {
+    background: rgba(52,168,83,0.25);
+    border-color: #34a853;
+    color: #fff;
+    transform: translateY(-1px);
+  }
+
+  /* Custom marker icons */
+  .marker-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    border: 2px solid rgba(255,255,255,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+    transition: transform 0.2s;
+  }
+
+  .marker-icon span {
+    transform: rotate(45deg);
+    font-size: 14px;
+    display: block;
+    line-height: 1;
+  }
+
+  .leaflet-marker-icon:hover .marker-icon { transform: rotate(-45deg) scale(1.2); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🍀 Our Family <span>Ireland</span> Adventures</h1>
+  <div class="stats" id="stats-label">Loading...</div>
+</header>
+
+<div class="filter-bar">
+  <span class="filter-label">Filter:</span>
+  <button class="filter-btn active" data-cat="all" style="border-color:#52b788; background:#0d2818; color:#52b788;">
+    <span class="dot" style="background:#52b788"></span> All Activities <span class="count-badge" id="cnt-all">0</span>
+  </button>
+  <button class="filter-btn" data-cat="Hike">
+    <span class="dot" style="background:#3b82f6"></span> Hike <span class="count-badge" id="cnt-Hike">0</span>
+  </button>
+  <button class="filter-btn" data-cat="Sight-seeing">
+    <span class="dot" style="background:#ef4444"></span> Sight-seeing <span class="count-badge" id="cnt-Sight-seeing">0</span>
+  </button>
+  <button class="filter-btn" data-cat="Beach">
+    <span class="dot" style="background:#a855f7"></span> Beach / Swimming <span class="count-badge" id="cnt-Beach">0</span>
+  </button>
+  <button class="filter-btn" data-cat="Biking">
+    <span class="dot" style="background:#f97316"></span> Biking <span class="count-badge" id="cnt-Biking">0</span>
+  </button>
+  <button class="filter-btn" data-cat="Kids">
+    <span class="dot" style="background:#ec4899"></span> Kids / Attraction <span class="count-badge" id="cnt-Kids">0</span>
+  </button>
+  <button class="filter-btn" data-cat="Museum">
+    <span class="dot" style="background:#14b8a6"></span> Museum <span class="count-badge" id="cnt-Museum">0</span>
+  </button>
+  <button class="filter-btn" data-cat="Other">
+    <span class="dot" style="background:#eab308"></span> Other <span class="count-badge" id="cnt-Other">0</span>
+  </button>
+</div>
+
+<div id="map"></div>
+
+<script>
+// ─── ALL ACTIVITY DATA ───────────────────────────────────────────────────────
+// Coordinates approximated by county & activity name
+const activities = [
+  // CLARE
+  {name:"12 O'clock Hills",type:"Hike",county:"Clare",grade:3,comment:"Nice loop walk up the 12 O'clock hill with a nice view from the summit",lat:52.892,lng:-9.003},
+  {name:"Kilkee Cliff Walk",type:"Hike",county:"Clare",grade:3,comment:"Nice walk along the Kilkee cliffs",lat:52.682,lng:-9.641},
+  {name:"Dromore Wood",type:"Hike",county:"Clare",grade:3,comment:"Nice walk near Ennis. The area near the lake is the nicer part of the walk, also nice for swimming",lat:52.982,lng:-8.963},
+  {name:"Lough Avalla Farm (Burren)",type:"Hike",county:"Clare",grade:4,comment:"In the Burren. Loop hike with nice views and a pretty lake",lat:53.003,lng:-9.026},
+  {name:"Cliffs of Moher",type:"Hike",county:"Clare",grade:5,comment:"An impressive walk along the famous Moher cliffs (south end is the nicest)",lat:52.972,lng:-9.426},
+  {name:"Bunratty Castle",type:"Sight-seeing",county:"Clare",grade:4,comment:"Nice castle and a 19th century village",lat:52.697,lng:-8.813},
+  {name:"Ballycuggaran Forest + Lough Derg",type:"Hike",county:"Clare",grade:4,comment:"Amazing lake, hike up the hill for a great view over the lake.",lat:52.833,lng:-8.531},
+  {name:"Ballycuggaran to Moylussa Summit",type:"Hike",county:"Clare",grade:3,comment:"The best view is on Feenlea summit, not much point in climbing also to Moylussa",lat:52.848,lng:-8.535},
+  {name:"Lough Gaelan to Mullaghmore (Burren)",type:"Hike",county:"Clare",grade:4,comment:"A very nice hike starting near a nice lake and then climbing a rocky hill",lat:53.03,lng:-9.08},
+  {name:"Black Head Circular",type:"Hike",county:"Clare",grade:3,comment:"Nice hike. Climbing a hill overlooking the Galway bay",lat:53.155,lng:-9.268},
+  {name:"Slieve Carran Brown & Yellow Trails",type:"Hike",county:"Clare",grade:2,comment:"2 short Burren walks - nothing specials",lat:53.024,lng:-8.965},
+  {name:"Coole Park Nature Reserve",type:"Sight-seeing",county:"Clare",grade:3,comment:"Nice lake with swans and a yard with reindeer",lat:53.117,lng:-8.873},
+  {name:"O'Briensbridge",type:"Hike",county:"Clare",grade:3,comment:"Nice walk along the Shannon banks",lat:52.723,lng:-8.498},
+  {name:"Cratloe Wood Park",type:"Hike",county:"Clare",grade:4,comment:"Very nice playground and nice walk in the woods",lat:52.681,lng:-8.774},
+  {name:"Cahermurphy Loop",type:"Hike",county:"Clare",grade:3,comment:"Short (2km) but pretty walk near a lake & a river",lat:52.858,lng:-9.081},
+  {name:"Ennistimon Waterfalls",type:"Sight-seeing",county:"Clare",grade:2,comment:"Nice waterfalls, but that is all",lat:52.942,lng:-9.294},
+  {name:"Lahinch Beach",type:"Beach",county:"Clare",grade:4,comment:"Very nice sandy beach & a nice town",lat:52.934,lng:-9.349},
+  {name:"North-West Coast of Co. Clare (Car Tour)",type:"Other",county:"Clare",grade:4,comment:"Amazing views of the ocean & the Burren",lat:53.11,lng:-9.38},
+  {name:"Moher Open Hill Farm",type:"Kids",county:"Clare",grade:5,comment:"Very nice pet farm with gymboree",lat:52.971,lng:-9.411},
+  {name:"Aliwee Cave & Bird of Prey Center",type:"Sight-seeing",county:"Clare",grade:4,comment:"Nice cave & bird show",lat:53.088,lng:-8.988},
+  {name:"Dough Castle (Inagh River Mouth)",type:"Beach",county:"Clare",grade:5,comment:"Great place for a swim in the river",lat:52.908,lng:-9.381},
+
+  // KERRY
+  {name:"Torc Waterfall & Mountain",type:"Hike",county:"Kerry",grade:5,comment:"Amazing view over the Killarney national park from the 500m summit",lat:51.983,lng:-9.531},
+  {name:"Dinis Cottage to Muckross House",type:"Hike",county:"Kerry",grade:4,comment:"Lovely boat sail in Lough Leane & Muckross lake, followed by a nice walk",lat:51.998,lng:-9.547},
+  {name:"Climbing the Mangerton",type:"Hike",county:"Kerry",grade:5,comment:"Amazing view of Lough Leane & the surrounding countryside - 4hr & 750m climb",lat:51.984,lng:-9.491},
+  {name:"Climbing the Carrauntoohil",type:"Hike",county:"Kerry",grade:5,comment:"Amazing view of many small lakes & the surrounding countryside - 8hr & 1,100m climb",lat:52.0,lng:-9.747},
+  {name:"Gap of Dunloe",type:"Hike",county:"Kerry",grade:5,comment:"11km walk through the beautiful Gap of Dunloe followed by a 1.5hr lovely boat sail in all 3 lakes",lat:52.033,lng:-9.641},
+  {name:"Dingle Aquarium",type:"Kids",county:"Kerry",grade:4,comment:"Nice attraction for a rainy day",lat:52.141,lng:-10.267},
+  {name:"Ring of Dingle + Dunmore Head Loop",type:"Sight-seeing",county:"Kerry",grade:4,comment:"Great views and lovely trail",lat:52.12,lng:-10.45},
+  {name:"Crag Cave + Gymburee",type:"Sight-seeing",county:"Kerry",grade:3,comment:"Small cave",lat:52.261,lng:-9.434},
+  {name:"Gleanteenassig Forest",type:"Hike",county:"Kerry",grade:4,comment:"Short (2km) but pretty walk near around lake",lat:52.171,lng:-9.963},
+  {name:"O'Sullivans Cascades",type:"Hike",county:"Kerry",grade:4,comment:"A nice walk and impressive waterfall",lat:51.895,lng:-9.653},
+  {name:"Ring of Kerry",type:"Sight-seeing",county:"Kerry",grade:4,comment:"Road trip with attractions along the way - better to do in 2 days",lat:51.9,lng:-9.85},
+  {name:"Innisfallen Island (Boat)",type:"Other",county:"Kerry",grade:4,comment:"Short sail to the beautiful Innisfallen island (deers)",lat:52.018,lng:-9.518},
+  {name:"Reenagross Woodland Park",type:"Hike",county:"Kerry",grade:3,comment:"Nice walk",lat:51.855,lng:-9.825},
+  {name:"Parknasilla",type:"Hike",county:"Kerry",grade:4,comment:"Very nice trail",lat:51.822,lng:-9.88},
+  {name:"Kerry Museum",type:"Kids",county:"Kerry",grade:3,comment:"The kids had a great time",lat:52.261,lng:-9.701},
+  {name:"Tralee Greenway (Biking)",type:"Biking",county:"Kerry",grade:4,comment:"28km (go & return)",lat:52.271,lng:-9.701},
+  {name:"Tralee Eco-Park",type:"Kids",county:"Kerry",grade:3,comment:"Optional activities: climbing wall, pedal boats & Zorbing",lat:52.278,lng:-9.696},
+  {name:"Tomies Wood & Lough Leane Loop",type:"Hike",county:"Kerry",grade:4,comment:"Very nice hike",lat:52.048,lng:-9.612},
+  {name:"Muckross House + Abbey + Torc (Biking)",type:"Biking",county:"Kerry",grade:4,comment:"Great day out",lat:52.003,lng:-9.527},
+  {name:"Cronin's Loop",type:"Hike",county:"Kerry",grade:4,comment:"Great hike for kids",lat:52.031,lng:-9.756},
+  {name:"Rossbeigh Strand Camping",type:"Beach",county:"Kerry",grade:5,comment:"Great camping site (wild) with beach and sand dunes",lat:52.0,lng:-9.935},
+  {name:"Killarney River Walk",type:"Hike",county:"Kerry",grade:4,comment:"Nice and easy walk in Killarney's park",lat:52.056,lng:-9.51},
+
+  // GALWAY
+  {name:"Inisheer (Aran Island)",type:"Hike",county:"Galway",grade:4,comment:"Sailing to the island with sea-side view of the Moher cliffs. Nice hike in the island",lat:53.061,lng:-9.509},
+  {name:"Diamond Hill",type:"Hike",county:"Galway",grade:5,comment:"Amazing view over the Connemara national park from the summit",lat:53.558,lng:-9.905},
+  {name:"Aasleagh Falls",type:"Sight-seeing",county:"Galway",grade:4,comment:"Lovely waterfall near the Killary fjord",lat:53.618,lng:-9.66},
+  {name:"Clifden Castle",type:"Sight-seeing",county:"Galway",grade:4,comment:"Nice ruins with amazing views over the Atlantic",lat:53.482,lng:-10.049},
+  {name:"Portumna Forest Park (Biking)",type:"Biking",county:"Galway",grade:5,comment:"Fantastic singletrack with great views",lat:53.088,lng:-8.213},
+  {name:"Rinville Park",type:"Hike",county:"Galway",grade:2,comment:"Nice fairy trail + playground",lat:53.243,lng:-8.964},
+  {name:"Derroura MTB Trails",type:"Biking",county:"Galway",grade:5,comment:"16km, amazing view over Lough Corrib",lat:53.441,lng:-9.508},
+  {name:"Turoe Pet Farm",type:"Kids",county:"Galway",grade:4,comment:"The kids loved it",lat:53.231,lng:-8.635},
+  {name:"Kylemore Abbey",type:"Sight-seeing",county:"Galway",grade:3,comment:"Pretty abbey near a beautiful lake",lat:53.558,lng:-9.887},
+  {name:"Sky Road",type:"Sight-seeing",county:"Galway",grade:4,comment:"Short road trip with great views",lat:53.497,lng:-10.09},
+  {name:"Wildlands",type:"Kids",county:"Galway",grade:3,comment:"Attraction park - payment per activity",lat:53.281,lng:-9.063},
+
+  // LIMERICK
+  {name:"Ballyhoura MTB Trails",type:"Biking",county:"Limerick",grade:5,comment:"Amazing singletrack with up to 50km of trails. Great downhill on the way back",lat:52.303,lng:-8.628},
+  {name:"Curragh Chase Forest Park",type:"Hike",county:"Limerick",grade:3,comment:"Nice walk (2.5km) in a forest along a small lake, old palace & small playground",lat:52.516,lng:-8.906},
+  {name:"Limerick Greenway (Biking)",type:"Biking",county:"Limerick",grade:3,comment:"50km bicycle road from Rathkeale to Listowel, the view is quite boring",lat:52.5,lng:-9.0},
+  {name:"King John's Castle",type:"Kids",county:"Limerick",grade:4,comment:"The kids loved it",lat:52.668,lng:-8.625},
+
+  // WATERFORD
+  {name:"Mahon Falls",type:"Hike",county:"Waterford",grade:5,comment:"Short hike to a beautiful waterfall",lat:52.229,lng:-7.647},
+  {name:"Waterford Greenway (Biking)",type:"Biking",county:"Waterford",grade:5,comment:"45km bicycle road from Waterford to Dungarvan, with amazing view over the Irish sea",lat:52.26,lng:-7.52},
+  {name:"Waterford Suir Valley Railway",type:"Sight-seeing",county:"Waterford",grade:3,comment:"Touristic train along the Suir river",lat:52.188,lng:-7.618},
+  {name:"Colligan Wood",type:"Hike",county:"Waterford",grade:3,comment:"To be explored (we only picnic there, but it looked lovely)",lat:52.094,lng:-7.617},
+  {name:"Medieval History Museum",type:"Museum",county:"Waterford",grade:1,comment:"Boring",lat:52.261,lng:-7.111},
+  {name:"Tramore Sand Dunes",type:"Beach",county:"Waterford",grade:3,comment:"Nice",lat:52.162,lng:-7.148},
+
+  // DUBLIN
+  {name:"Dublin Zoo",type:"Sight-seeing",county:"Dublin",grade:4,comment:"Very nice zoo",lat:53.358,lng:-6.307},
+  {name:"Phoenix Park (Biking)",type:"Biking",county:"Dublin",grade:3,comment:"Nice cycling in the large Phoenix park",lat:53.362,lng:-6.332},
+  {name:"Guinness Storehouse",type:"Sight-seeing",county:"Dublin",grade:2,comment:"Nice tour, not for children",lat:53.342,lng:-6.287},
+  {name:"Malahide Castle & Gardens",type:"Sight-seeing",county:"Dublin",grade:3,comment:"Nice walk in the gardens & Fairy trail",lat:53.451,lng:-6.154},
+  {name:"Killiney Hill",type:"Hike",county:"Dublin",grade:4,comment:"Nice playground and walk with great view of Dublin and the sea",lat:53.267,lng:-6.107},
+  {name:"Dublinia",type:"Museum",county:"Dublin",grade:3,comment:"The kids enjoyed",lat:53.344,lng:-6.269},
+  {name:"Howth",type:"Hike",county:"Dublin",grade:4,comment:"Nice walk, many nice restaurants in Howth",lat:53.388,lng:-6.062},
+  {name:"Ticknock Forest (Biking)",type:"Biking",county:"Dublin",grade:4,comment:"Tough climb, but very fun ride",lat:53.265,lng:-6.232},
+  {name:"Teeling Distillery",type:"Sight-seeing",county:"Dublin",grade:3,comment:"Nice",lat:53.342,lng:-6.272},
+  {name:"Great South Wall",type:"Hike",county:"Dublin",grade:4,comment:"Nice walk on a long wharf in the middle of Dublin bay",lat:53.326,lng:-6.2},
+
+  // WICKLOW
+  {name:"Blesington Circle (Biking)",type:"Biking",county:"Wicklow",grade:4,comment:"Great views, 40km, optional forest with deers",lat:53.167,lng:-6.527},
+  {name:"Blesington Lake",type:"Beach",county:"Wicklow",grade:4,comment:"Great place for swimming",lat:53.171,lng:-6.548},
+  {name:"Glendalough",type:"Hike",county:"Wicklow",grade:5,comment:"Great hike up the mountain around a nice lake",lat:53.013,lng:-6.328},
+  {name:"Glendalough: Spinc & Miners Way",type:"Hike",county:"Wicklow",grade:5,comment:"Amazing hike",lat:53.011,lng:-6.334},
+  {name:"Great Sugar Loaf",type:"Hike",county:"Wicklow",grade:4,comment:"Short but nice climb with great view from the top",lat:53.151,lng:-6.137},
+  {name:"Devil's Glen",type:"Hike",county:"Wicklow",grade:4,comment:"Nice hike along a small river with waterfall at the end",lat:52.966,lng:-6.122},
+  {name:"Powerscourt Waterfall",type:"Sight-seeing",county:"Wicklow",grade:3,comment:"Highest waterfall in Ireland + nice playground",lat:53.131,lng:-6.207},
+  {name:"Powerscourt House & Gardens",type:"Sight-seeing",county:"Wicklow",grade:3,comment:"Nice gardens",lat:53.173,lng:-6.2},
+  {name:"Lough Tay",type:"Sight-seeing",county:"Wicklow",grade:5,comment:"Amazing view over Lough Tay - perfect spot for a picnic café",lat:53.078,lng:-6.278},
+  {name:"White Hill (Lough Tay)",type:"Hike",county:"Wicklow",grade:4,comment:"Nice hike up a hill above Lough Tay",lat:53.079,lng:-6.27},
+  {name:"Lough Dan Walk",type:"Hike",county:"Wicklow",grade:4,comment:"Very nice, can go down to the lough shore",lat:53.063,lng:-6.278},
+  {name:"Bray Head Hill",type:"Hike",county:"Wicklow",grade:3,comment:"Nice view of the Irish sea & Bray area",lat:53.197,lng:-6.097},
+  {name:"Ballinastoe MTB",type:"Biking",county:"Wicklow",grade:5,comment:"Amazing MTB",lat:53.1,lng:-6.169},
+  {name:"Glencullen Adventure Park (The Gap)",type:"Biking",county:"Wicklow",grade:3,comment:"Downhill park",lat:53.234,lng:-6.248},
+  {name:"Camaderry Circle",type:"Hike",county:"Wicklow",grade:3,comment:"Nice long hike",lat:53.019,lng:-6.34},
+  {name:"Lugnaquilla & Cloghernagh Loop",type:"Hike",county:"Wicklow",grade:4,comment:"Nice & tough hike",lat:52.969,lng:-6.466},
+
+  // KILDARE
+  {name:"Clonfert Pet Farm",type:"Kids",county:"Kildare",grade:4,comment:"Very nice place with animals, gymboree & other activities",lat:53.233,lng:-8.019},
+  {name:"Kildare Maze",type:"Kids",county:"Kildare",grade:3,comment:"Nice",lat:53.155,lng:-6.906},
+  {name:"Royal Canal Greenway (Biking)",type:"Biking",county:"Kildare",grade:3,comment:"Home tour 2",lat:53.38,lng:-6.593},
+  {name:"Grand Canal Greenway (Biking)",type:"Biking",county:"Kildare",grade:3,comment:"Home tour 1",lat:53.333,lng:-6.535},
+  {name:"Donadea",type:"Hike",county:"Kildare",grade:3,comment:"Nice 6 km walk",lat:53.376,lng:-6.712},
+
+  // CORK
+  {name:"Blarney Castle & Gardens",type:"Sight-seeing",county:"Cork",grade:4,comment:"Pretty castle with beautiful gardens",lat:51.929,lng:-8.57},
+  {name:"Fota Wildlife Park",type:"Kids",county:"Cork",grade:2,comment:"Standard zoo",lat:51.896,lng:-8.298},
+  {name:"Sheep's Head Lighthouse Trail",type:"Hike",county:"Cork",grade:4,comment:"Great view on Bantry Bay & more",lat:51.529,lng:-9.649},
+  {name:"Waterfall Alpaca Farm",type:"Hike",county:"Cork",grade:3,comment:"The alpaca farm can be skipped, there is a very nice short hike along the Ilen river",lat:51.618,lng:-9.128},
+  {name:"Farran Forest Park",type:"Hike",county:"Cork",grade:3,comment:"Standard walk along the Lee river (with deers). Zipit activity park as well.",lat:51.87,lng:-8.748},
+  {name:"Glengarriff Woods Nature Reserve",type:"Hike",county:"Cork",grade:4,comment:"Very nice trail",lat:51.75,lng:-9.565},
+  {name:"Gleninchiquin",type:"Hike",county:"Cork",grade:5,comment:"Amazing views",lat:51.761,lng:-9.713},
+  {name:"Cashelkeelty Loop",type:"Hike",county:"Cork",grade:3,comment:"Nice walk",lat:51.68,lng:-9.755},
+
+  // NORTHERN IRELAND
+  {name:"The Giants Lair Story Trail",type:"Hike",county:"Northern Ireland",grade:4,comment:"The nicest 'fairy' trail we did",lat:54.761,lng:-6.208},
+  {name:"Belfast Zoo",type:"Sight-seeing",county:"Northern Ireland",grade:3,comment:"Nice zoo",lat:54.643,lng:-5.952},
+  {name:"W5 Science Museum",type:"Museum",county:"Northern Ireland",grade:5,comment:"Very nice science museum - full day attraction",lat:54.603,lng:-5.912},
+  {name:"Ulster Museum",type:"Museum",county:"Northern Ireland",grade:3,comment:"Nice nature & history museum - good for 2-3hrs",lat:54.585,lng:-5.934},
+  {name:"Crumlin Glen",type:"Hike",county:"Northern Ireland",grade:2,comment:"Small river near Crumlin town, doesn't worth the 30min drive from Belfast",lat:54.614,lng:-6.103},
+  {name:"Castlewellan Forest Park",type:"Hike",county:"Northern Ireland",grade:4,comment:"Nice Maze & playground. Pretty lake with several trails around",lat:54.264,lng:-5.942},
+  {name:"Marble Arch Caves",type:"Sight-seeing",county:"Northern Ireland",grade:4,comment:"Very nice cave with underground river",lat:54.306,lng:-7.741},
+  {name:"Giants Causeway",type:"Hike",county:"Northern Ireland",grade:5,comment:"Short hike to see the amazing Giants' Causeway (very touristic)",lat:55.24,lng:-6.512},
+  {name:"Carrick-A-Rede",type:"Hike",county:"Northern Ireland",grade:4,comment:"Short hike with rope bridge to a little island",lat:55.233,lng:-6.33},
+  {name:"Glanriff Forest Park",type:"Hike",county:"Northern Ireland",grade:4,comment:"Short hike near a beautiful river and waterfall",lat:54.328,lng:-6.181},
+  {name:"Cranny Falls",type:"Hike",county:"Northern Ireland",grade:2,comment:"Short walk to a waterfall",lat:54.726,lng:-5.943},
+  {name:"The Fishermen Walk, Portglenone",type:"Hike",county:"Northern Ireland",grade:4,comment:"Nice walk on the bank of the Bann",lat:54.868,lng:-6.478},
+  {name:"Kilbroney Park",type:"Hike",county:"Northern Ireland",grade:3,comment:"Short easy walk",lat:54.169,lng:-6.115},
+  {name:"Silent Valley Mountain Park",type:"Hike",county:"Northern Ireland",grade:3,comment:"Few optional trails",lat:54.165,lng:-5.966},
+
+  // TIPPERARY
+  {name:"Clare Glen",type:"Hike",county:"Tipperary",grade:4,comment:"Nice walk (2km nicer than the 4km) in a forest along a lovely river",lat:52.701,lng:-8.197},
+  {name:"Lough Curra",type:"Hike",county:"Tipperary",grade:4,comment:"~9km & 600m climb. Amazing view & many sheep",lat:52.43,lng:-8.026},
+  {name:"Grave of the Leinsterman",type:"Hike",county:"Tipperary",grade:4,comment:"Very nice view over Lough Derg",lat:52.899,lng:-8.16},
+  {name:"Rock of Cashel",type:"Sight-seeing",county:"Tipperary",grade:3,comment:"Very beautiful but not much to do",lat:52.52,lng:-7.888},
+  {name:"Knockmealdown & Sugarloaf Hill",type:"Hike",county:"Tipperary",grade:3,comment:"Nice hike",lat:52.255,lng:-7.972},
+  {name:"Millenium Cross",type:"Hike",county:"Tipperary",grade:4,comment:"Easy, great views over Lough Derg",lat:52.877,lng:-8.219},
+
+  // OFFALY
+  {name:"Slieve Bloom MTB Trail",type:"Biking",county:"Offaly",grade:4,comment:"Did the 'Mountain top' trail (30km), should do the 'River run' (22km) next",lat:53.07,lng:-7.67},
+
+  // MAYO
+  {name:"Cong Woods & Ashford Castle",type:"Hike",county:"Mayo",grade:5,comment:"Amazing trail & Castle",lat:53.535,lng:-9.288},
+  {name:"Ballycroy (Nephin National Park)",type:"Hike",county:"Mayo",grade:2,comment:"Short and not very impressive walk",lat:53.985,lng:-9.686},
+  {name:"Achill Island (Car Tour)",type:"Other",county:"Mayo",grade:4,comment:"Beautiful shoreline, nice summit lookout (Minaun heights) & fun beaches",lat:53.993,lng:-10.019},
+  {name:"Great Western Greenway (Biking)",type:"Biking",county:"Mayo",grade:5,comment:"Amazing views of mountains, bays & lakes",lat:53.98,lng:-9.62},
+  {name:"Crough Patrick",type:"Hike",county:"Mayo",grade:4,comment:"Climbing the famous Crough Patrick - great view of the Westport bay",lat:53.761,lng:-9.64},
+  {name:"Cruise on Lake Corrib",type:"Other",county:"Mayo",grade:3,comment:"A bit boring",lat:53.439,lng:-9.243},
+  {name:"Tourmakeady Waterfall",type:"Hike",county:"Mayo",grade:4,comment:"Nice 3km hike",lat:53.619,lng:-9.427},
+  {name:"Westport House",type:"Kids",county:"Mayo",grade:3,comment:"Mediocre adventure park",lat:53.795,lng:-9.52},
+  {name:"Letterkeen Loop",type:"Hike",county:"Mayo",grade:4,comment:"Amazing place - didn't complete the hike due to weather conditions",lat:53.928,lng:-9.764},
+
+  // DONEGAL
+  {name:"Glenveagh National Park",type:"Hike",county:"Donegal",grade:3,comment:"Nice lake & gardens",lat:55.047,lng:-7.987},
+  {name:"Donegal Coastline",type:"Sight-seeing",county:"Donegal",grade:5,comment:"Very nice beaches",lat:54.751,lng:-8.449},
+  {name:"Ards Forest Park",type:"Hike",county:"Donegal",grade:4,comment:"Nice hike - many different options",lat:55.014,lng:-7.849},
+  {name:"Slieve League",type:"Hike",county:"Donegal",grade:4,comment:"Beautiful cliffs",lat:54.634,lng:-8.696},
+
+  // SLIGO
+  {name:"Hazelwood Forest (Camping)",type:"Other",county:"Sligo",grade:4,comment:"Great camping site and a nice short hike",lat:54.256,lng:-8.445},
+  {name:"Benbulben Forest Walk",type:"Hike",county:"Sligo",grade:3,comment:"Nice hike",lat:54.318,lng:-8.361},
+  {name:"Devil's Chimney",type:"Hike",county:"Sligo",grade:2,comment:"Short hike - the waterfall was dry",lat:54.266,lng:-8.497},
+  {name:"Glencar Waterfall",type:"Sight-seeing",county:"Sligo",grade:5,comment:"Amazing waterfall",lat:54.323,lng:-8.363},
+  {name:"Queen Maeve's Trail",type:"Hike",county:"Sligo",grade:4,comment:"A very nice hike up-hill with great view",lat:54.261,lng:-8.488},
+
+  // KILKENNY
+  {name:"Jurassic Park",type:"Kids",county:"Kilkenny",grade:4,comment:"The kids had a ball",lat:52.656,lng:-7.261},
+  {name:"Kilkenny Castle (Gardens)",type:"Sight-seeing",county:"Kilkenny",grade:4,comment:"Nice gardens (free) with playground",lat:52.651,lng:-7.248},
+  {name:"Castlecomer Discovery Park",type:"Kids",county:"Kilkenny",grade:4,comment:"Zipit",lat:52.811,lng:-7.216},
+  {name:"Castlemorris Wood",type:"Hike",county:"Kilkenny",grade:2,comment:"Boring hike",lat:52.651,lng:-7.268},
+
+  // LEITRIM
+  {name:"The Shed Distillery (Drumshanbo)",type:"Sight-seeing",county:"Leitrim",grade:3,comment:"Didn't do the tour",lat:54.046,lng:-8.024},
+
+  // ROSCOMMON
+  {name:"Lough Key Forest & Activity Park",type:"Hike",county:"Roscommon",grade:4,comment:"Nice place with few hikes and Zip It park",lat:53.96,lng:-8.047},
+  {name:"Roscommon Castle",type:"Sight-seeing",county:"Roscommon",grade:3,comment:"Ruins + playground",lat:53.633,lng:-8.192},
+
+  // LOUTH
+  {name:"Carlingford Greenway (Biking)",type:"Biking",county:"Louth",grade:3,comment:"Short greenway near the Carlingford lough",lat:54.033,lng:-6.188},
+
+  // WEXFORD
+  {name:"Irish National Heritage Park",type:"Kids",county:"Wexford",grade:4,comment:"Nice place",lat:52.351,lng:-6.473},
+  {name:"Johnstown Castle",type:"Kids",county:"Wexford",grade:3,comment:"Museum, castle & Gardens",lat:52.266,lng:-6.524},
+  {name:"Seal Rescue Centre",type:"Kids",county:"Wexford",grade:2,comment:"",lat:52.354,lng:-6.424},
+
+  // CAVAN
+  {name:"Killykeen Loop (Biking)",type:"Biking",county:"Cavan",grade:3,comment:"Nice country side route",lat:53.85,lng:-7.367},
+
+  // MEATH
+  {name:"Trim Castle",type:"Sight-seeing",county:"Meath",grade:3,comment:"Impressive ruins with a nice nearby park",lat:53.555,lng:-6.792},
+
+  // WESTMEATH
+  {name:"Lake Owel",type:"Beach",county:"Westmeath",grade:4,comment:"Great place for swimming",lat:53.556,lng:-7.424},
+];
+
+// ─── CATEGORY CONFIG ─────────────────────────────────────────────────────────
+const catConfig = {
+  Hike:         { color:'#3b82f6', bg:'rgba(59,130,246,0.15)', icon:'🥾', label:'Hike' },
+  'Sight-seeing':{ color:'#ef4444', bg:'rgba(239,68,68,0.15)',  icon:'🏛️', label:'Sight-seeing' },
+  Beach:        { color:'#a855f7', bg:'rgba(168,85,247,0.15)', icon:'🏖️', label:'Beach / Swimming' },
+  Biking:       { color:'#f97316', bg:'rgba(249,115,22,0.15)', icon:'🚴', label:'Biking' },
+  Kids:         { color:'#ec4899', bg:'rgba(236,72,153,0.15)', icon:'🎠', label:'Kids / Attraction' },
+  Museum:       { color:'#14b8a6', bg:'rgba(20,184,166,0.15)', icon:'🏛', label:'Museum' },
+  Other:        { color:'#eab308', bg:'rgba(234,179,8,0.15)',  icon:'📍', label:'Other' },
+};
+
+function getCategory(type) {
+  const t = type.toLowerCase();
+  if (t.includes('hike') || t.includes('long hike') || t.includes('climb')) return 'Hike';
+  if (t.includes('beach') || t.includes('lake') || t.includes('swimming')) return 'Beach';
+  if (t.includes('bike') || t.includes('biking') || t.includes('mtb') || t.includes('cycling')) return 'Biking';
+  if (t.includes('sight') || t.includes('zoo') || t.includes('car tour') || t.includes('pet farm') && !t.includes('kids')) return 'Sight-seeing';
+  if (t.includes('kids') || t.includes('attraction') || t.includes('atraction') || t.includes('pet farm') || t.includes('museum') && t.includes('kids')) return 'Kids';
+  if (t.includes('museum')) return 'Museum';
+  return 'Other';
+}
+
+// Tag each activity
+activities.forEach(a => { a.cat = getCategory(a.type); });
+
+// Count by category
+const counts = { all: activities.length };
+Object.keys(catConfig).forEach(k => { counts[k] = activities.filter(a => a.cat === k).length; });
+document.getElementById('cnt-all').textContent = counts.all;
+Object.keys(catConfig).forEach(k => {
+  const el = document.getElementById('cnt-' + k);
+  if (el) el.textContent = counts[k] || 0;
+});
+document.getElementById('stats-label').textContent = `${counts.all} activities across Ireland`;
+
+// ─── MAP INIT ────────────────────────────────────────────────────────────────
+const map = L.map('map', { zoomControl: true }).setView([53.5, -8.2], 7);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+  maxZoom: 19
+}).addTo(map);
+
+// ─── MARKERS ─────────────────────────────────────────────────────────────────
+function createMarkerIcon(cat) {
+  const cfg = catConfig[cat];
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44">
+      <defs>
+        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.5)"/>
+        </filter>
+      </defs>
+      <path d="M18 2 C9.16 2 2 9.16 2 18 C2 28.5 18 42 18 42 C18 42 34 28.5 34 18 C34 9.16 26.84 2 18 2 Z"
+        fill="${cfg.color}" stroke="white" stroke-width="2" filter="url(#shadow)"/>
+      <circle cx="18" cy="18" r="10" fill="white" opacity="0.2"/>
+      <text x="18" y="23" text-anchor="middle" font-size="13">${cfg.icon}</text>
+    </svg>`;
+  return L.divIcon({
+    html: svg,
+    className: '',
+    iconSize: [36, 44],
+    iconAnchor: [18, 44],
+    popupAnchor: [0, -46]
+  });
+}
+
+function starsHTML(grade) {
+  if (!grade || isNaN(grade)) return '<span style="color:#64748b;font-size:0.75rem">No rating</span>';
+  const n = parseInt(grade);
+  return Array.from({length:5}, (_,i) =>
+    `<span style="color:${i<n?'#e9c46a':'#374151'}">★</span>`
+  ).join('');
+}
+
+const markerGroups = {};
+const allMarkers = [];
+
+activities.forEach(a => {
+  const cfg = catConfig[a.cat];
+  const icon = createMarkerIcon(a.cat);
+  const marker = L.marker([a.lat, a.lng], { icon });
+
+  const googleQuery = encodeURIComponent(`${a.name} ${a.county} Ireland`);
+  const googleSearchUrl = `https://www.google.com/search?q=${googleQuery}`;
+  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${a.lat},${a.lng}&travelmode=driving`;
+
+  const popup = `
+    <div class="popup-header">
+      <div class="popup-cat" style="background:${cfg.bg};color:${cfg.color};">
+        ${cfg.icon} ${cfg.label}
+      </div>
+      <div class="popup-name">${a.name}</div>
+      <div class="popup-county">📍 Co. ${a.county}</div>
+    </div>
+    <div class="popup-body">
+      <div class="popup-grade">
+        <span class="popup-grade-label">Rating</span>
+        <span>${starsHTML(a.grade)}</span>
+        ${a.grade ? `<span style="color:#64748b;font-size:0.72rem">${a.grade}/5</span>` : ''}
+      </div>
+      <div class="popup-comment">${a.comment || 'No details available.'}</div>
+      <div class="popup-actions">
+        <a href="${googleSearchUrl}" target="_blank" rel="noopener" class="popup-action-btn google">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          Google it
+        </a>
+        <a href="${googleMapsUrl}" target="_blank" rel="noopener" class="popup-action-btn maps">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+          Get Directions
+        </a>
+      </div>
+    </div>`;
+
+  marker.bindPopup(popup, { maxWidth: 320, className: '' });
+  marker.addTo(map);
+  allMarkers.push({ marker, cat: a.cat });
+
+  if (!markerGroups[a.cat]) markerGroups[a.cat] = [];
+  markerGroups[a.cat].push(marker);
+});
+
+// ─── FILTER LOGIC ─────────────────────────────────────────────────────────────
+let activeFilter = 'all';
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const cat = btn.dataset.cat;
+    if (cat === activeFilter) return;
+    activeFilter = cat;
+
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      b.classList.remove('active');
+      b.style.background = '#1f2937';
+      b.style.color = '#d1d5db';
+      b.style.borderColor = 'transparent';
+    });
+
+    const cfg = cat === 'all' ? { color: '#52b788' } : catConfig[cat];
+    btn.classList.add('active');
+    btn.style.borderColor = cfg.color;
+    btn.style.background = cat === 'all' ? '#0d2818' : `rgba(${hexToRgb(cfg.color)}, 0.12)`;
+    btn.style.color = cfg.color;
+
+    allMarkers.forEach(({ marker, cat: mCat }) => {
+      if (cat === 'all' || mCat === cat) {
+        if (!map.hasLayer(marker)) marker.addTo(map);
+      } else {
+        if (map.hasLayer(marker)) map.removeLayer(marker);
+      }
+    });
+
+    const visible = cat === 'all' ? activities.length : (counts[cat] || 0);
+    document.getElementById('stats-label').textContent =
+      cat === 'all' ? `${activities.length} activities across Ireland` :
+      `${visible} ${catConfig[cat]?.label || cat} location${visible !== 1 ? 's' : ''}`;
+  });
+});
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `${r},${g},${b}`;
+}
+</script>
+</body>
+</html>
